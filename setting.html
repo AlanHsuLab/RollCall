@@ -14,6 +14,7 @@
         button.btn-secondary { background-color: #95a5a6; }
         button.btn-github { background-color: #24292e; }
         button.btn-success { background-color: #16a085; }
+        button.btn-warning { background-color: #f39c12; }
         button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
         .git-select-wrapper { display: flex; align-items: center; gap: 5px; }
         select { padding: 7px 10px; font-size: 13px; border-radius: 4px; border: 1px solid #ccc; background: white; max-width: 180px; }
@@ -22,8 +23,12 @@
         .color-selector-tool { display: flex; align-items: center; gap: 12px; background: #eee; padding: 8px 12px; border-radius: 4px; font-size: 13px; flex-wrap: wrap; width: 100%; margin-top: 5px; }
         .color-group { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 110px; height: 55px; padding: 4px; box-sizing: border-box; border: 1px solid #dfe6e9; border-radius: 4px; cursor: pointer; }
         .color-group.active { border: 2px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .color-label, .seat-input { width: 90%; border: none; border-bottom: 1px dashed #ccc; text-align: center; font-size: 13px; background: transparent; outline: none; color: #333; }
-        .color-label:focus, .seat-input:focus { border-bottom: 1px solid #333; }
+        
+        /* 修改這裡 */
+        .color-label, .seat-input { width: 90%; border: none; text-align: center; font-size: 13px; background: transparent; outline: none; color: #333; }
+        /* .color-label { cursor: pointer; } */ /* 讓使用者知道可以點擊切換 */
+        /* .color-label:focus, .seat-input:focus { border-bottom: 1px solid #333; } */
+        
         .grid-container { overflow: auto; max-width: 100%; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         table { border-collapse: collapse; user-select: none; }
         th, td { border: 1px solid #dfe6e9; text-align: center; position: relative; }
@@ -73,7 +78,7 @@
     <div id="unsavedWarning" class="unsaved-warning">⚠️ 偵測到未儲存的變更，請記得儲存檔案！</div>
 
     <h1>座位排定系統</h1>
-    <div class="subtitle">提示：上方類別格子與座位格子功能一致，點擊可打字。</div>
+    <div class="subtitle">提示：點選下方顏色工具並點擊「修改類別名稱」按鈕可變更名稱，避免誤觸。</div>
     
     <div class="control-panel">
         <button class="btn-secondary" id="undoBtn" disabled>上一步 (Undo)</button>
@@ -87,13 +92,14 @@
 
         <div class="color-selector-tool">
             <span>刷色工具：</span>
-            <div class="color-group c-white active" data-color="white"><input type="text" class="color-label" data-color="white" placeholder="一般(白)"></div>
-            <div class="color-group c-red" data-color="red"><input type="text" class="color-label" data-color="red" placeholder="區域 A(紅)"></div>
-            <div class="color-group c-orange" data-color="orange"><input type="text" class="color-label" data-color="orange" placeholder="區域 B(橘)"></div>
-            <div class="color-group c-yellow" data-color="yellow"><input type="text" class="color-label" data-color="yellow" placeholder="區域 C(黃)"></div>
-            <div class="color-group c-green" data-color="green"><input type="text" class="color-label" data-color="green" placeholder="區域 D(綠)"></div>
-            <div class="color-group c-blue" data-color="blue"><input type="text" class="color-label" data-color="blue" placeholder="區域 E(藍)"></div>
-            <div class="color-group c-purple" data-color="purple"><input type="text" class="color-label" data-color="purple" placeholder="區域 F(紫)"></div>
+            <div class="color-group c-white active" data-color="white"><input type="text" class="color-label" data-color="white" placeholder="一般(白)" readonly></div>
+            <div class="color-group c-red" data-color="red"><input type="text" class="color-label" data-color="red" placeholder="區域 A(紅)" readonly></div>
+            <div class="color-group c-orange" data-color="orange"><input type="text" class="color-label" data-color="orange" placeholder="區域 B(橘)" readonly></div>
+            <div class="color-group c-yellow" data-color="yellow"><input type="text" class="color-label" data-color="yellow" placeholder="區域 C(黃)" readonly></div>
+            <div class="color-group c-green" data-color="green"><input type="text" class="color-label" data-color="green" placeholder="區域 D(綠)" readonly></div>
+            <div class="color-group c-blue" data-color="blue"><input type="text" class="color-label" data-color="blue" placeholder="區域 E(藍)" readonly></div>
+            <div class="color-group c-purple" data-color="purple"><input type="text" class="color-label" data-color="purple" placeholder="區域 F(紫)" readonly></div>
+            <button type="button" class="btn-warning" id="renameCategoryBtn">✏️ 修改類別名稱</button>
         </div>
     </div>
 
@@ -103,7 +109,6 @@
         // ==========================================
         // === 這裡填入你的 GitHub 資訊 (已完成混淆) ===
         // ==========================================
-        // 這是你原本的 Token 每個字元 ASCII +3 後的密文，可安全上傳至 GitHub
         const OBFUSCATED_TOKEN = "jksbEToTSyrRTFVg:yquwjpInEZ7qdZ|ye4gG9]m"; 
         const GIT_OWNER = "AlanHsuLab";
         const GIT_REPO  = "RollCall"; 
@@ -121,7 +126,7 @@
         const revColorMap = { 'W': 'white', 'R': 'red', 'O': 'orange', 'Y': 'yellow', 'G': 'green', 'B': 'blue', 'P': 'purple' };
 
         document.querySelectorAll('.color-group').forEach(group => {
-            group.addEventListener('click', (e) => { if (e.target.tagName !== 'INPUT') setActiveColor(group.dataset.color); });
+            group.addEventListener('click', () => setActiveColor(group.dataset.color));
         });
 
         function setActiveColor(color) {
@@ -130,9 +135,19 @@
             currentColor = color;
         }
 
-        document.querySelectorAll('.color-label').forEach(input => {
-            input.addEventListener('change', saveState);
-            input.addEventListener('focus', (e) => setActiveColor(e.target.dataset.color));
+        // 修改類別名稱按鈕點擊事件
+        document.getElementById('renameCategoryBtn').addEventListener('click', () => {
+            const currentInput = document.querySelector(`.color-label[data-color="${currentColor}"]`);
+            if (!currentInput) return;
+            
+            const currentName = currentInput.value || currentInput.placeholder;
+            const newName = prompt(`請輸入此類別的新名稱（目前：${currentName}）：`, currentInput.value);
+            
+            if (newName !== null) {
+                saveState();
+                currentInput.value = newName.trim();
+                setUnsavedStatus(true);
+            }
         });
 
         function setUnsavedStatus(isDirty) {
@@ -328,7 +343,6 @@
             }
         }
 
-        // 修改：動態將密文每個字元 ASCII 碼減 3 還原出原本的 Token
         const cleanToken = () => {
             return Array.from(OBFUSCATED_TOKEN).map(c => String.fromCharCode(c.charCodeAt(0) - 3)).join('');
         };
