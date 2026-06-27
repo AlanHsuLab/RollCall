@@ -73,7 +73,7 @@
     <div id="unsavedWarning" class="unsaved-warning">⚠️ 偵測到未儲存的變更，請記得儲存檔案！</div>
 
     <h1>座位排定系統</h1>
-    <div class="subtitle">提示：上方類別格子與座位格子功能一致，點擊可打字。支援 <b>Ctrl + Z</b> 復原。</div>
+    <div class="subtitle">提示：上方類別格子與座位格子功能一致，點擊可打字。</div>
     
     <div class="control-panel">
         <button class="btn-secondary" id="undoBtn" disabled>上一步 (Undo)</button>
@@ -81,8 +81,8 @@
             <select id="githubFileSelect"><option value="">-- 讀取舊檔 (加載中) --</option></select>
             <button id="githubLoadBtn" style="background-color: #553399;">讀取舊檔</button>
         </div>
-        <button class="btn-success" id="githubQuickSaveBtn">儲存 (覆蓋目前檔案)</button>
-        <button class="btn-github" id="githubUploadBtn">另存新檔 (命名並同步)</button>
+        <button class="btn-success" id="githubQuickSaveBtn">儲存檔案</button>
+        <button class="btn-github" id="githubUploadBtn">另存新檔</button>
         <span class="current-status" id="currentFileStatus">目前狀態：新建立的座位表</span>
 
         <div class="color-selector-tool">
@@ -397,9 +397,9 @@
             btn.disabled = true; btn.innerText = '正在儲存...';
             try {
                 await executeUploadToGitHub(currentEditingFileName);
-                alert(`儲存成功！已更新覆蓋雲端舊檔【${currentEditingFileName.slice(0, -4)}】`);
+                alert(`儲存成功！已更新檔案`);
             } catch (e) { alert(`儲存失敗：${e.message}`); }
-            btn.disabled = false; btn.innerText = '儲存 (覆蓋目前檔案)';
+            btn.disabled = false; btn.innerText = '儲存檔案';
         });
 
         document.getElementById('githubUploadBtn').addEventListener('click', async () => {
@@ -413,7 +413,7 @@
             try {
                 await executeUploadToGitHub(fileName); alert(`【${fileName.slice(0, -4)}】存檔並同步成功！`);
             } catch (e) { alert(`上傳失敗：${e.message}`); }
-            btn.disabled = false; btn.innerText = '另存新檔 (命名並同步)';
+            btn.disabled = false; btn.innerText = '另存新檔';
         });
 
         renderTable();
