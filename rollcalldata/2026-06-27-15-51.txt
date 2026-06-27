@@ -46,6 +46,6 @@ SIZE-6-9
 6-4-柳琴-O-none
 6-5-指揮-P-none
 6-6-高胡-R-none
-6-7-二胡-R-none
+6-7-二胡-R-leave
 6-8-二胡-R-none
 6-9-二胡-R-none
