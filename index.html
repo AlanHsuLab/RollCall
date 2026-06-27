@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級座位與點名管理系統</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+        .subtitle {
+            font-size: 1rem;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+        }
+        .card-wrapper {
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            padding: 35px 25px;
+            width: 280px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.8);
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+        }
+        .card-setting:hover {
+            border-bottom: 5px solid #3498db;
+        }
+        .card-rollcall:hover {
+            border-bottom: 5px solid #16a085;
+        }
+        .icon {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        .card:hover .icon {
+            transform: scale(1.1);
+        }
+        .card-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+        .card-desc {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            line-height: 1.5;
+        }
+        footer {
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>座位與點名管理系統</h1>
+        <p class="subtitle">歡迎使用！請選擇您接下來要執行的操作項目：</p>
+        
+        <div class="card-wrapper">
+            <a href="setting.html" class="card card-setting">
+                <div class="card-title">座位排定系統</div>
+                <div class="card-desc">編輯、更新或建立全新的座位表，並對不同區域/類別進行色彩刷色與命名管理。</div>
+            </a>
+
+            <a href="rollcall.html" class="card card-rollcall">
+                <div class="card-title">雲端點名系統</div>
+                <div class="card-desc">載入既有座位表進行每日點名，支援一鍵快速全組點名，並可匯出 Excel 報表與自動雲端同步。</div>
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

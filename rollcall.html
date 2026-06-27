@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點名系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 20px; background-color: #f8f9fa; color: #333; }
+        h1 { color: #2c3e50; margin-bottom: 5px;}
+        .subtitle { color: #7f8c8d; margin-bottom: 20px; font-size: 14px; }
+        .control-panel { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        button { border: none; padding: 8px 14px; font-size: 13px; border-radius: 4px; cursor: pointer; transition: background 0.2s; color: white; background-color: #3498db; }
+        button:hover { filter: brightness(0.9); }
+        button.btn-secondary { background-color: #95a5a6; }
+        button.btn-github { background-color: #24292e; }
+        button.btn-success { background-color: #16a085; }
+        button.btn-excel { background-color: #27ae60; } /* Excel 專用綠色 */
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .current-status { font-size: 12px; color: #2980b9; font-weight: bold; margin-left: 5px; }
+        
+        .color-selector-tool { display: flex; align-items: center; gap: 12px; background: #eee; padding: 8px 12px; border-radius: 4px; font-size: 13px; flex-wrap: wrap; width: 100%; margin-top: 5px; }
+        .status-desc { display: inline-block; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+
+        /* 快速點名面板樣式 */
+        .quick-roll-panel { display: flex; align-items: center; gap: 8px; background: #e8f4fd; padding: 8px 12px; border-radius: 4px; font-size: 13px; flex-wrap: wrap; width: 100%; margin-top: 5px; border: 1px solid #d4e6f1; }
+        .quick-roll-title { font-weight: bold; color: #2980b9; }
+        
+        /* 快速點名按鈕基礎樣式：預設深色字體，加上框線 */
+        .quick-btn { font-size: 12px; padding: 5px 12px; color: #333; font-weight: bold; border: 1px solid #bdc3c7; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+
+        .grid-container { overflow: auto; max-width: 100%; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        table { border-collapse: collapse; user-select: none; }
+        th, td { border: 1px solid #dfe6e9; text-align: center; position: relative; padding: 6px; }
+        th { background-color: #f1f2f6; font-size: 12px; color: #57606f; font-weight: bold; }
+        
+        .row-header { display: flex; justify-content: center; align-items: center; padding: 4px; width: 65px; box-sizing: border-box; }
+        .axis-label { color: #2c3e50; }
+        
+        .seat-cell { width: 110px; height: 55px; padding: 4px; box-sizing: border-box; background-color: #ffffff; transition: box-shadow 0.15s ease; cursor: pointer; }
+        .seat-id { font-size: 10px; color: #95a5a6; display: block; margin-bottom: 2px; pointer-events: none; }
+        .seat-name { display: block; font-size: 13px; font-weight: 500; color: #333; height: 20px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+
+        /* 顏色背景庫（座位與按鈕共用） */
+        .c-white  { background-color: #ffffff; }
+        .c-red    { background-color: #ffcccc; }
+        .c-orange { background-color: #ffe5cc; }
+        .c-yellow { background-color: #ffffcc; }
+        .c-green  { background-color: #ccffcc; }
+        .c-blue   { background-color: #cce5ff; }
+        .c-purple { background-color: #e5ccff; }
+
+        .status-present { box-shadow: inset 0 0 0 4px #2ecc71 !important; }
+        .status-leave   { box-shadow: inset 0 0 0 4px #3498db !important; }
+        .status-absent  { box-shadow: inset 0 0 0 4px #e74c3c !important; }
+
+        .unsaved-warning {
+            position: fixed; top: 20px; right: 20px; background-color: #fff5f5; color: #e74c3c; border: 2px solid #e74c3c;
+            padding: 10px 16px; border-radius: 6px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 12px rgba(231, 76, 60, 0.15);
+            z-index: 9999; display: none; animation: warningPulse 2s infinite;
+        }
+        @keyframes warningPulse {
+            0% { opacity: 0.9; } 50% { opacity: 1; border-color: #c0392b; color: #c0392b; } 100% { opacity: 0.9; }
+        }
+
+        /* 導航主彈窗與樣式設計 */
+        .file-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55);
+            display: flex; justify-content: center; align-items: center; z-index: 10000;
+        }
+        .file-modal {
+            background: white; padding: 30px; border-radius: 12px; max-width: 480px; width: 90%; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25); text-align: center;
+        }
+        .file-modal h3 { margin-top: 0; color: #2c3e50; font-size: 20px; margin-bottom: 10px; }
+        .mode-container { display: flex; gap: 15px; justify-content: center; margin-top: 20px; }
+        .mode-btn { padding: 15px 20px; font-size: 15px; font-weight: bold; border-radius: 8px; flex: 1; }
+        .mode-btn.btn-init { background-color: #2ecc71; }
+        .mode-btn.btn-modify { background-color: #3498db; }
+        
+        .file-list-container { display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; margin-top: 20px; padding: 5px; }
+        .file-select-btn {
+            background-color: #f8f9fa; color: #2c3e50; padding: 12px; border-radius: 6px; font-weight: 500;
+            text-align: left; font-size: 14px; transition: all 0.15s; border: 1px solid #dcdde1;
+        }
+        .file-select-btn:hover { background-color: #2c3e50; color: white; border-color: #24292e; transform: translateY(-1px); }
+        .back-btn { background-color: #e74c3c; margin-top: 15px; width: 100%; padding: 10px; font-weight: bold; }
+        .loading-text { color: #7f8c8d; font-size: 14px; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div id="fileModalOverlay" class="file-modal-overlay">
+        <div class="file-modal">
+            <h3 id="modalTitle">歡迎使用點名系統</h3>
+            <p id="modalDesc" style="font-size: 14px; color: #7f8c8d; margin: 0;">請選擇您今天的點名模式：</p>
+            
+            <div id="modeSelectionBlock" class="mode-container">
+                <button class="mode-btn btn-init" onclick="switchWorkflowMode('init')">初始全新點名</button>
+                <button class="mode-btn btn-modify" onclick="switchWorkflowMode('modify')">二次修改點名</button>
+            </div>
+
+            <div id="fileListWrapper" style="display: none;">
+                <div id="fileListContainer" class="file-list-container"></div>
+                <button class="back-btn" onclick="returnToModeSelection()">⬅️ 返回選擇模式</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="unsavedWarning" class="unsaved-warning">⚠️ 偵測到未儲存的變更，請記得儲存檔案！</div>
+
+    <h1>點名系統</h1>
+    <div class="subtitle">提示：點擊座位可切換點名外框狀態。空座位無法點名。</div>
+    
+    <div class="control-panel">
+        <button class="btn-secondary" id="undoBtn" disabled>上一步</button>
+        <button class="btn-success" id="githubQuickSaveBtn">儲存紀錄</button>
+        <button class="btn-github" id="githubUploadBtn">另存新紀錄</button>
+        <button class="btn-excel" id="exportExcelBtn">匯出成 Excel</button>
+        <span class="current-status" id="currentFileStatus">目前檔案：未載入</span>
+
+        <div class="color-selector-tool">
+            <span>點名狀態說明：</span>
+            <span class="status-desc" style="background-color: #fff; border: 2px solid #ccc;">無外框 (未點名)</span> ➔ 
+            <span class="status-desc" style="border: 2px solid #2ecc71; color: #2ecc71;">綠色外框 (出席)</span> ➔ 
+            <span class="status-desc" style="border: 2px solid #3498db; color: #3498db;">藍色外框 (請假)</span> ➔ 
+            <span class="status-desc" style="border: 2px solid #e74c3c; color: #e74c3c;">紅色外框 (無故缺席)</span>
+        </div>
+
+        <div class="quick-roll-panel" id="quickRollPanel" style="display: none;">
+            <span class="quick-roll-title">⚡ 快速點名：</span>
+            <div id="quickRollContainer" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
+        </div>
+    </div>
+
+    <div class="grid-container"><table id="seatTable"></table></div>
+
+    <script>
+        // ==========================================
+        // === GitHub 資訊與路徑設定 ===
+        // ==========================================
+        const OBFUSCATED_TOKEN = "jksbEToTSyrRTFVg:yquwjpInEZ7qdZ|ye4gG9]m"; 
+        const GIT_OWNER   = "AlanHsuLab";
+        const GIT_REPO    = "RollCall"; 
+        const SEAT_FOLDER = "seatdata";       
+        const ROLL_FOLDER = "rollcalldata";   
+        // ==========================================
+
+        let totalRows = 10, totalCols = 20, currentEditingFileName = "", currentActiveMode = "";
+        let historyStack = [];
+        const maxHistory = 30;
+
+        const table = document.getElementById('seatTable');
+        const undoBtn = document.getElementById('undoBtn');
+        const warningEl = document.getElementById('unsavedWarning');
+        const modalOverlay = document.getElementById('fileModalOverlay');
+        const fileListContainer = document.getElementById('fileListContainer');
+        
+        const modeSelectionBlock = document.getElementById('modeSelectionBlock');
+        const fileListWrapper = document.getElementById('fileListWrapper');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalDesc = document.getElementById('modalDesc');
+        
+        const colorMap = { 'white': 'W', 'red': 'R', 'orange': 'O', 'yellow': 'Y', 'green': 'G', 'blue': 'B', 'purple': 'P' };
+        const revColorMap = { 'W': 'white', 'R': 'red', 'O': 'orange', 'Y': 'yellow', 'G': 'green', 'B': 'blue', 'P': 'purple' };
+        
+        const fallbackLabelsMap = { 'W': '白色', 'R': '紅色', 'O': '橘色', 'Y': '黃色', 'G': '綠色', 'B': '藍色', 'P': '紫色' };
+        let dynamicCategoryLabels = {};
+
+        let categoryStatusTracker = {};
+
+        const zhStatusMap = { 'present': '出席', 'leave': '請假', 'absent': '無故缺席', '': '未點名' };
+        const statusCycle = ["", "present", "leave", "absent"];
+
+        let originalLabelsLine = "";
+
+        function getFormattedTime() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function switchWorkflowMode(mode) {
+            currentActiveMode = mode;
+            modeSelectionBlock.style.display = 'none';
+            fileListWrapper.style.display = 'block';
+            
+            if (mode === 'init') {
+                modalTitle.innerText = "選擇全新點名範本";
+                modalDesc.innerText = "請直接點擊要使用的座位表：";
+                fetchGitHubFileList(SEAT_FOLDER);
+            } else {
+                modalTitle.innerText = "選擇既有紀錄進行修改";
+                modalDesc.innerText = "請直接點擊要調出來進行二次修改的點名紀錄：";
+                fetchGitHubFileList(ROLL_FOLDER);
+            }
+        }
+
+        function returnToModeSelection() {
+            fileListWrapper.style.display = 'none';
+            modeSelectionBlock.style.display = 'flex';
+            modalTitle.innerText = "歡迎使用點名系統";
+            modalDesc.innerText = "請選擇您今天的點名模式：";
+        }
+
+        async function startRollCallWorkflow(targetPath, fileName) {
+            modalOverlay.style.display = 'none';
+
+            if (currentActiveMode === 'init') {
+                const defaultTime = getFormattedTime();
+                let eventName = prompt("請輸入本次全新點名事件的名稱：", defaultTime);
+                if (eventName === null) {
+                    modalOverlay.style.display = 'flex'; 
+                    return; 
+                }
+                eventName = eventName.trim() || defaultTime;
+                currentEditingFileName = `${eventName}.txt`;
+            } else {
+                currentEditingFileName = fileName;
+            }
+
+            await loadSeatTableFile(targetPath);
+        }
+
+        function setUnsavedStatus(isDirty) {
+            warningEl.style.display = isDirty ? 'block' : 'none';
+        }
+
+        function saveState() {
+            const currentState = serializeState();
+            if (historyStack.length > 0 && historyStack[historyStack.length - 1] === currentState) return;
+            historyStack.push(currentState);
+            if (historyStack.length > maxHistory) historyStack.shift();
+            undoBtn.disabled = false;
+            setUnsavedStatus(true);
+        }
+
+        function undo() {
+            if (historyStack.length === 0) return;
+            const previousState = JSON.parse(historyStack.pop());
+            totalRows = previousState.rows;
+            totalCols = previousState.cols;
+            renderTable();
+            restoreData(previousState.data);
+            if (historyStack.length === 0) undoBtn.disabled = true;
+            setUnsavedStatus(true);
+        }
+
+        function serializeState() {
+            return JSON.stringify({ rows: totalRows, cols: totalCols, data: backupData() });
+        }
+
+        undoBtn.addEventListener('click', undo);
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+                e.preventDefault(); undo();
+            }
+        });
+
+        function renderTable() {
+            table.innerHTML = '';
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th>位置標籤</th>' + Array.from({length: totalCols}, (_, c) => `
+                <th><div class="axis-label">第 ${c+1} 欄</div></th>
+            `).join('');
+            table.appendChild(headerRow);
+
+            for (let r = 1; r <= totalRows; r++) {
+                const tr = document.createElement('tr');
+                const leftTh = document.createElement('th');
+                leftTh.innerHTML = `<div class="row-header"><div class="axis-label">第 ${r} 列</div></div>`;
+                tr.appendChild(leftTh);
+
+                for (let c = 1; c <= totalCols; c++) {
+                    const td = document.createElement('td');
+                    td.className = `seat-cell c-white`;
+                    td.dataset.row = r; td.dataset.col = c; td.dataset.color = 'white'; td.dataset.status = "";
+
+                    td.addEventListener('click', function() {
+                        const name = this.querySelector('.seat-name').innerText.trim();
+                        if (name === '空') return;
+
+                        saveState();
+                        toggleSeatStatus(this);
+                    });
+
+                    const seatId = document.createElement('span');
+                    seatId.className = 'seat-id'; seatId.innerText = `${r}-${c}`;
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'seat-name';
+                    nameSpan.innerText = '空'; 
+                    
+                    td.appendChild(seatId); td.appendChild(nameSpan); tr.appendChild(td);
+                }
+                table.appendChild(tr);
+            }
+        }
+
+        function toggleSeatStatus(tdElement, targetStatus = null) {
+            tdElement.classList.remove('status-present', 'status-leave', 'status-absent');
+            let nextStatus = targetStatus;
+            if (nextStatus === null) {
+                let currentStatus = tdElement.dataset.status || "";
+                let currentIndex = statusCycle.indexOf(currentStatus);
+                nextStatus = statusCycle[(currentIndex + 1) % statusCycle.length];
+            }
+            tdElement.dataset.status = nextStatus;
+            if (nextStatus) tdElement.classList.add(`status-${nextStatus}`);
+        }
+
+        function changeCellColor(tdElement, color) {
+            Object.keys(colorMap).forEach(c => tdElement.classList.remove(`c-${c}`));
+            tdElement.classList.add(`c-${color}`);
+            tdElement.dataset.color = color;
+        }
+
+        function backupData() {
+            return Array.from(document.querySelectorAll('.seat-cell')).map(td => {
+                const name = td.querySelector('.seat-name').innerText.trim();
+                return { 
+                    r: parseInt(td.dataset.row), 
+                    c: parseInt(td.dataset.col), 
+                    name: (name === '空') ? "" : name, 
+                    color: td.dataset.color,
+                    status: td.dataset.status || ""
+                };
+            }).filter(d => d.name !== "" || d.color !== 'white' || d.status !== "");
+        }
+
+        function restoreData(dataArray) {
+            dataArray.forEach(d => {
+                const td = document.querySelector(`.seat-cell[data-row="${d.r}"][data-col="${d.c}"]`);
+                if (td) { 
+                    td.querySelector('.seat-name').innerText = d.name || '空'; 
+                    changeCellColor(td, d.color || 'white');
+                    toggleSeatStatus(td, d.status || "");
+                }
+            });
+            generateQuickRollButtons();
+        }
+
+        function generateQuickRollButtons() {
+            const panel = document.getElementById('quickRollPanel');
+            const container = document.getElementById('quickRollContainer');
+            container.innerHTML = '';
+
+            const keys = Object.keys(dynamicCategoryLabels);
+            if (keys.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+
+            panel.style.display = 'flex';
+            keys.forEach(code => {
+                const categoryName = dynamicCategoryLabels[code];
+                
+                if (categoryStatusTracker[code] === undefined) {
+                    categoryStatusTracker[code] = 0;
+                }
+
+                const btn = document.createElement('button');
+                const colorWord = revColorMap[code] || 'white';
+                btn.className = `quick-btn c-${colorWord}`;
+                btn.innerText = categoryName;
+                btn.onclick = () => triggerQuickRollCycle(code, categoryName);
+                container.appendChild(btn);
+            });
+        }
+
+        function triggerQuickRollCycle(colorCode, categoryName) {
+            categoryStatusTracker[colorCode] = (categoryStatusTracker[colorCode] + 1) % statusCycle.length;
+            let targetStatus = statusCycle[categoryStatusTracker[colorCode]];
+
+            const targetColorWord = revColorMap[colorCode] || 'white';
+            const targetCells = Array.from(document.querySelectorAll('.seat-cell')).filter(td => {
+                const name = td.querySelector('.seat-name').innerText.trim();
+                return td.dataset.color === targetColorWord && name !== '空';
+            });
+
+            if (targetCells.length === 0) {
+                alert(`目前畫面上沒有屬於【${categoryName}】的有效學生座位。`);
+                return;
+            }
+
+            saveState();
+
+            targetCells.forEach(td => {
+                toggleSeatStatus(td, targetStatus);
+            });
+
+            setUnsavedStatus(true);
+        }
+
+        function generateExportContent() {
+            let exportLines = [`SIZE-${totalRows}-${totalCols}`];
+            if (originalLabelsLine) {
+                exportLines.push(originalLabelsLine);
+            }
+            document.querySelectorAll('.seat-cell').forEach(td => {
+                const name = td.querySelector('.seat-name').innerText.trim();
+                const cleanName = (name === '空') ? "" : name;
+                const colorCode = colorMap[td.dataset.color] || 'W';
+                const status = td.dataset.status || "none";
+                if (cleanName !== "" || colorCode !== 'W' || status !== "none") {
+                    exportLines.push(`${td.dataset.row}-${td.dataset.col}-${cleanName}-${colorCode}-${status}`);
+                }
+            });
+            return exportLines.join('\n');
+        }
+
+        function parseAndLoadTextContent(contents) {
+            let incomingData = [], fileRows = totalRows, fileCols = totalCols, hasSizeMeta = false;
+            dynamicCategoryLabels = {}; 
+            categoryStatusTracker = {}; 
+            originalLabelsLine = "";
+
+            contents.split('\n').forEach(line => {
+                const cleanLine = line.replace('\r', '').trim();
+                if(!cleanLine) return;
+
+                if (cleanLine.startsWith('SIZE-')) {
+                    const parts = cleanLine.split('-');
+                    if(parts.length === 3) { fileRows = parseInt(parts[1]); fileCols = parseInt(parts[2]); hasSizeMeta = true; }
+                    return; 
+                }
+
+                if (cleanLine.startsWith('LABELS-')) {
+                    originalLabelsLine = cleanLine;
+                    const labelContent = cleanLine.replace('LABELS-', '');
+                    labelContent.split(',').forEach(kv => {
+                        const kvParts = kv.split(':');
+                        if (kvParts.length === 2) {
+                            dynamicCategoryLabels[kvParts[0].trim()] = kvParts[1].trim();
+                        }
+                    });
+                    return;
+                }
+                
+                const parts = cleanLine.split('-');
+                if (parts.length >= 3) {
+                    const r = parseInt(parts[0]), c = parseInt(parts[1]), name = parts[2];
+                    const colorCode = parts[3] || 'W';
+                    let status = parts[4] || "";
+                    if (status === "none") status = "";
+
+                    if(!isNaN(r) && !isNaN(c)) {
+                        if (!hasSizeMeta) { if (r > fileRows) fileRows = r; if (c > fileCols) fileCols = c; }
+                        incomingData.push({ r, c, name, color: revColorMap[colorCode] || 'white', status: status });
+                    }
+                }
+            });
+            totalRows = fileRows; totalCols = fileCols;
+            renderTable(); 
+            restoreData(incomingData);
+            
+            generateQuickRollButtons();
+        }
+
+        function updateFileStatusUI() {
+            const statusEl = document.getElementById('currentFileStatus'), quickSaveBtn = document.getElementById('githubQuickSaveBtn');
+            if (currentEditingFileName) {
+                statusEl.innerText = `目前檔案：${currentEditingFileName.replace('.txt', '')}`;
+                statusEl.style.color = '#16a085'; quickSaveBtn.style.display = 'inline-block';
+            } else {
+                statusEl.innerText = "目前狀態：未載入";
+                statusEl.style.color = '#7f8c8d'; quickSaveBtn.style.display = 'none';
+            }
+        }
+
+        const cleanToken = () => {
+            return Array.from(OBFUSCATED_TOKEN).map(c => String.fromCharCode(c.charCodeAt(0) - 3)).join('');
+        };
+
+        async function loadSeatTableFile(targetPath) {
+            try {
+                const res = await fetch(`https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${targetPath}`, { headers: { 'Authorization': `token ${cleanToken()}`, 'Accept': 'application/vnd.github.v3+json' } });
+                if (!res.ok) throw new Error();
+                const fileData = await res.json(), content = decodeURIComponent(escape(atob(fileData.content)));
+                saveState(); parseAndLoadTextContent(content);
+                updateFileStatusUI();
+                setUnsavedStatus(false);
+            } catch (e) { alert('載入失敗，請確認網路或 GitHub 檔案狀態。'); }
+        }
+
+        async function fetchGitHubFileList(folderName) {
+            fileListContainer.innerHTML = '<span class="loading-text">正在讀取雲端清單，請稍候...</span>';
+            const url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${folderName}`;
+            try {
+                const res = await fetch(url, { headers: { 'Authorization': `token ${cleanToken()}`, 'Accept': 'application/vnd.github.v3+json' } });
+                if (!res.ok) { fileListContainer.innerHTML = '<span style="color:#e74c3c">無法加載雲端資料。</span>'; return; }
+                const items = await res.json(), txtFiles = items.filter(i => i.type === 'file' && i.name.endsWith('.txt'));
+                
+                if(txtFiles.length > 0) {
+                    fileListContainer.innerHTML = '';
+                    txtFiles.forEach(f => {
+                        const btn = document.createElement('button');
+                        btn.className = 'file-select-btn';
+                        btn.innerText = folderName === SEAT_FOLDER ? `📋 ${f.name.slice(0, -4)}` : `📝 ${f.name.slice(0, -4)}`;
+                        btn.onclick = () => startRollCallWorkflow(f.path, f.name);
+                        fileListContainer.appendChild(btn);
+                    });
+                } else {
+                    fileListContainer.innerHTML = `<span class="loading-text">目前該資料夾 (${folderName}/) 內沒有任何點名座位表檔案。</span>`;
+                }
+            } catch (e) { 
+                console.error(e); 
+                fileListContainer.innerHTML = '<span style="color:#e74c3c">連線至 GitHub 發生錯誤。</span>';
+            }
+        }
+
+        async function executeUploadToGitHub(fileName) {
+            const fullPath = `${ROLL_FOLDER}/${fileName}`, url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${fullPath}`;
+            const content = generateExportContent(), base64Content = btoa(unescape(encodeURIComponent(content)));
+            let sha = null;
+
+            const getRes = await fetch(url, { headers: { 'Authorization': `token ${cleanToken()}`, 'Accept': 'application/vnd.github.v3+json' } });
+            if (getRes.ok) { const fileData = await getRes.json(); sha = fileData?.sha; }
+
+            const bodyData = { message: `Save rollcall data: ${fileName}`, content: base64Content };
+            if (sha) bodyData.sha = sha;
+
+            const putRes = await fetch(url, {
+                method: 'PUT', headers: { 'Authorization': `token ${cleanToken()}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (putRes.ok) {
+                currentEditingFileName = fileName; updateFileStatusUI();
+                setUnsavedStatus(false);
+                return true;
+            } else {
+                throw new Error((await putRes.json()).message);
+            }
+        }
+
+        document.getElementById('githubQuickSaveBtn').addEventListener('click', async () => {
+            if (!currentEditingFileName) return;
+            const btn = document.getElementById('githubQuickSaveBtn');
+            btn.disabled = true; btn.innerText = '正在儲存...';
+            try {
+                await executeUploadToGitHub(currentEditingFileName);
+                alert(`儲存成功！已覆蓋更新雲端紀錄【${ROLL_FOLDER}/${currentEditingFileName.slice(0, -4)}】`);
+            } catch (e) { alert(`儲存失敗：${e.message}`); }
+            btn.disabled = false; btn.innerText = '儲存紀錄';
+        });
+
+        document.getElementById('githubUploadBtn').addEventListener('click', async () => {
+            let defaultName = currentEditingFileName ? currentEditingFileName.slice(0, -4) : `點名紀錄_${getFormattedTime()}`;
+            let fileName = prompt("請輸入本次點名紀錄的存檔名稱：", defaultName);
+            if (!fileName) return;
+            fileName = fileName.trim(); if (!fileName.endsWith('.txt')) fileName += '.txt';
+
+            const btn = document.getElementById('githubUploadBtn');
+            btn.disabled = true; btn.innerText = '正在同步...';
+            try {
+                await executeUploadToGitHub(fileName); 
+                alert(`點名紀錄已成功同步至雲端【${ROLL_FOLDER}/${fileName.slice(0, -4)}】！`);
+            } catch (e) { alert(`上傳失敗：${e.message}`); }
+            btn.disabled = false; btn.innerText = '另存新紀錄';
+        });
+
+        // 核心修改：匯出成 Excel 時同步觸發 GitHub 雲端存檔
+        document.getElementById('exportExcelBtn').addEventListener('click', async () => {
+            const cells = document.querySelectorAll('.seat-cell');
+            const excelData = [];
+
+            cells.forEach(td => {
+                const name = td.querySelector('.seat-name').innerText.trim();
+                if (name !== '空' || td.dataset.color !== 'white' || td.dataset.status !== '') {
+                    const code = colorMap[td.dataset.color] || 'W';
+                    const categoryName = dynamicCategoryLabels[code] || fallbackLabelsMap[code] || '未知';
+
+                    excelData.push({
+                        '類別名稱': categoryName, 
+                        '姓名': name === '空' ? '' : name,
+                        '點名狀態': zhStatusMap[td.dataset.status || ''],
+                        '_colorSortCode': code 
+                    });
+                }
+            });
+
+            if (excelData.length === 0) {
+                alert('目前沒有有效的點名資料可供匯出！');
+                return;
+            }
+
+            const btn = document.getElementById('exportExcelBtn');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '處理中...';
+
+            let outName = currentEditingFileName ? currentEditingFileName.slice(0, -4) : `點名紀錄_${getFormattedTime()}`;
+
+            // 1. 同步存檔到 GitHub
+            let cloudSaveSuccess = false;
+            let targetFileName = currentEditingFileName || `${outName}.txt`;
+            try {
+                await executeUploadToGitHub(targetFileName);
+                cloudSaveSuccess = true;
+            } catch (e) {
+                console.error("雲端存檔失敗:", e);
+            }
+
+            // 2. 處理並下載 Excel
+            const colorOrder = ['W', 'R', 'O', 'Y', 'G', 'B', 'P'];
+            excelData.sort((a, b) => {
+                const indexA = colorOrder.indexOf(a._colorSortCode);
+                const indexB = colorOrder.indexOf(b._colorSortCode);
+                return indexA - indexB;
+            });
+            excelData.forEach(item => delete item._colorSortCode);
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "點名紀錄表");
+            worksheet['!cols'] = [{wch: 15}, {wch: 14}, {wch: 12}];
+            
+            XLSX.writeFile(workbook, `${outName}.xlsx`);
+
+            // 3. 恢復按鈕狀態並提示使用者
+            btn.disabled = false;
+            btn.innerText = originalText;
+
+            if (cloudSaveSuccess) {
+                alert(`Excel 匯出完成！\n點名紀錄也已自動同步至雲端`);
+            } else {
+                alert(`Excel 匯出完成！\n⚠️ 注意：雲端備份失敗，請稍後手動點擊「儲存紀錄」按鈕。`);
+            }
+        });
+
+        renderTable();
+    </script>
+</body>
+</html>
