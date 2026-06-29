@@ -41,14 +41,27 @@
         .seat-id { font-size: 10px; color: #95a5a6; display: block; margin-bottom: 2px; pointer-events: none; }
         .seat-name { display: block; font-size: 13px; font-weight: 500; color: #333; height: 20px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 
-        /* 顏色背景庫（座位與按鈕共用） */
-        .c-white  { background-color: #ffffff; }
-        .c-red    { background-color: #ffcccc; }
-        .c-orange { background-color: #ffe5cc; }
-        .c-yellow { background-color: #ffffcc; }
-        .c-green  { background-color: #ccffcc; }
-        .c-blue   { background-color: #cce5ff; }
-        .c-purple { background-color: #e5ccff; }
+        /* [修改] 當座位為空時隱框線、隱內容、取消指標游標，達成「不顯示」的效果 */
+        .seat-cell.is-empty { background-color: transparent !important; border-color: transparent !important; cursor: default !important; box-shadow: none !important; }
+        .seat-cell.is-empty * { display: none !important; }
+
+        /* 16 色顏色背景庫（座位與按鈕共用） */
+        .c-white      { background-color: #ffffff; }
+        .c-red        { background-color: #f7c5c2; } /* 高胡 - 燕麥粉紅 */
+        .c-orange     { background-color: #f6d2b3; } /* 中胡 - 柔紗暖橘 */
+        .c-yellow     { background-color: #f4e5a9; } /* 二胡-1 - 淡洋甘菊 */
+        .c-green      { background-color: #c4ebd0; } /* 二胡-2 - 薄荷鼠尾草 */
+        .c-blue       { background-color: #c5dcf2; } /* 低音 - 迷霧晴藍 */
+        .c-purple     { background-color: #dec8e3; } /* 古箏 - 丁香輕紫 */
+        .c-pink       { background-color: #f7cae1; } /* 揚琴 - 霧透莓粉 */
+        .c-cyan       { background-color: #c3eee7; } /* 柳琴 - 晨露青瓷 */
+        .c-lime       { background-color: #d6f0b4; } /* 琵琶 - 酪梨青綠 */
+        .c-brown      { background-color: #e5d4c3; } /* 中阮 - 溫潤奶茶 */
+        .c-navy       { background-color: #ced9e3; } /* 大阮 - 亞麻灰藍 */
+        .c-olive      { background-color: #f4ecc1; } /* 嗩吶 - 柔白乳酪 */
+        .c-teal       { background-color: #baeade; } /* 笙 - 冰川湖綠 */
+        .c-magenta    { background-color: #f3cbd6; } /* 笛子 - 暮光煙粉 */
+        .c-gold       { background-color: #edd3bc; } /* 打擊 - 暗香檳金 */
 
         .status-present { box-shadow: inset 0 0 0 4px #2ecc71 !important; }
         .status-leave   { box-shadow: inset 0 0 0 4px #3498db !important; }
@@ -161,10 +174,20 @@
         const modalTitle = document.getElementById('modalTitle');
         const modalDesc = document.getElementById('modalDesc');
         
-        const colorMap = { 'white': 'W', 'red': 'R', 'orange': 'O', 'yellow': 'Y', 'green': 'G', 'blue': 'B', 'purple': 'P' };
-        const revColorMap = { 'W': 'white', 'R': 'red', 'O': 'orange', 'Y': 'yellow', 'G': 'green', 'B': 'blue', 'P': 'purple' };
+        // 擴充至 16 色對應表
+        const colorMap = { 
+            'white': 'W', 'red': 'R', 'orange': 'O', 'yellow': 'Y', 'green': 'G', 'blue': 'B', 'purple': 'P',
+            'pink': 'K', 'cyan': 'C', 'lime': 'L', 'brown': 'N', 'navy': 'V', 'olive': 'I', 'teal': 'T', 'magenta': 'M', 'gold': 'D'
+        };
+        const revColorMap = { 
+            'W': 'white', 'R': 'red', 'O': 'orange', 'Y': 'yellow', 'G': 'green', 'B': 'blue', 'P': 'purple',
+            'K': 'pink', 'C': 'cyan', 'L': 'lime', 'N': 'brown', 'V': 'navy', 'I': 'olive', 'T': 'teal', 'M': 'magenta', 'D': 'gold'
+        };
         
-        const fallbackLabelsMap = { 'W': '白色', 'R': '紅色', 'O': '橘色', 'Y': '黃色', 'G': '綠色', 'B': '藍色', 'P': '紫色' };
+        const fallbackLabelsMap = { 
+            'W': '白色', 'R': '紅色', 'O': '橘色', 'Y': '黃色', 'G': '綠色', 'B': '藍色', 'P': '紫色',
+            'K': '粉紅', 'C': '青色', 'L': '萊姆', 'N': '棕色', 'V': '海軍藍', 'I': '橄欖綠', 'T': '藍綠', 'M': '洋紅', 'D': '金色'
+        };
         let dynamicCategoryLabels = {};
 
         let categoryStatusTracker = {};
@@ -272,12 +295,13 @@
 
                 for (let c = 1; c <= totalCols; c++) {
                     const td = document.createElement('td');
-                    td.className = `seat-cell c-white`;
+                    // [修改] 預設建立時加上 is-empty 類別，隱藏空座位
+                    td.className = `seat-cell c-white is-empty`;
                     td.dataset.row = r; td.dataset.col = c; td.dataset.color = 'white'; td.dataset.status = "";
 
                     td.addEventListener('click', function() {
                         const name = this.querySelector('.seat-name').innerText.trim();
-                        if (name === '空') return;
+                        if (name === '空' || this.classList.contains('is-empty')) return;
 
                         saveState();
                         toggleSeatStatus(this);
@@ -320,7 +344,7 @@
                 return { 
                     r: parseInt(td.dataset.row), 
                     c: parseInt(td.dataset.col), 
-                    name: (name === '空') ? "" : name, 
+                    name: (name === '空' || td.classList.contains('is-empty')) ? "" : name, 
                     color: td.dataset.color,
                     status: td.dataset.status || ""
                 };
@@ -331,9 +355,17 @@
             dataArray.forEach(d => {
                 const td = document.querySelector(`.seat-cell[data-row="${d.r}"][data-col="${d.c}"]`);
                 if (td) { 
-                    td.querySelector('.seat-name').innerText = d.name || '空'; 
+                    const nameText = d.name || '空';
+                    td.querySelector('.seat-name').innerText = nameText; 
                     changeCellColor(td, d.color || 'white');
                     toggleSeatStatus(td, d.status || "");
+                    
+                    // [修改] 復原資料時，根據名字是否為有效名字來移除或加上不顯示的類別
+                    if (nameText !== '空' && nameText !== '') {
+                        td.classList.remove('is-empty');
+                    } else {
+                        td.classList.add('is-empty');
+                    }
                 }
             });
             generateQuickRollButtons();
@@ -350,8 +382,25 @@
                 return;
             }
 
-            panel.style.display = 'flex';
+            // [修改] 2. 統計目前畫面上各顏色分類實際擁有的有效學生座位數量
+            const activeColorsCount = {};
+            document.querySelectorAll('.seat-cell').forEach(td => {
+                const name = td.querySelector('.seat-name').innerText.trim();
+                if (name !== '空' && !td.classList.contains('is-empty')) {
+                    const code = colorMap[td.dataset.color] || 'W';
+                    activeColorsCount[code] = (activeColorsCount[code] || 0) + 1;
+                }
+            });
+
+            let hasAnyVisibleButton = false;
+
             keys.forEach(code => {
+                // [修改] 如果該類別在當前座位表上沒有任何學生座位，直接跳過不顯示
+                if (!activeColorsCount[code] || activeColorsCount[code] === 0) {
+                    return; 
+                }
+
+                hasAnyVisibleButton = true;
                 const categoryName = dynamicCategoryLabels[code];
                 
                 if (categoryStatusTracker[code] === undefined) {
@@ -365,6 +414,13 @@
                 btn.onclick = () => triggerQuickRollCycle(code, categoryName);
                 container.appendChild(btn);
             });
+
+            // [修改] 如果最後沒有任何按鈕被顯示，隱藏整個快速點名面板
+            if (hasAnyVisibleButton) {
+                panel.style.display = 'flex';
+            } else {
+                panel.style.display = 'none';
+            }
         }
 
         function triggerQuickRollCycle(colorCode, categoryName) {
@@ -374,7 +430,7 @@
             const targetColorWord = revColorMap[colorCode] || 'white';
             const targetCells = Array.from(document.querySelectorAll('.seat-cell')).filter(td => {
                 const name = td.querySelector('.seat-name').innerText.trim();
-                return td.dataset.color === targetColorWord && name !== '空';
+                return td.dataset.color === targetColorWord && name !== '空' && !td.classList.contains('is-empty');
             });
 
             if (targetCells.length === 0) {
@@ -398,7 +454,8 @@
             }
             document.querySelectorAll('.seat-cell').forEach(td => {
                 const name = td.querySelector('.seat-name').innerText.trim();
-                const cleanName = (name === '空') ? "" : name;
+                const isEmptyClass = td.classList.contains('is-empty');
+                const cleanName = (name === '空' || isEmptyClass) ? "" : name;
                 const colorCode = colorMap[td.dataset.color] || 'W';
                 const status = td.dataset.status || "none";
                 if (cleanName !== "" || colorCode !== 'W' || status !== "none") {
@@ -482,6 +539,31 @@
             } catch (e) { alert('載入失敗，請確認網路或 GitHub 檔案狀態。'); }
         }
 
+        async function executeUploadToGitHub(fileName) {
+            const fullPath = `${ROLL_FOLDER}/${fileName}`, url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${fullPath}`;
+            const content = generateExportContent(), base64Content = btoa(unescape(encodeURIComponent(content)));
+            let sha = null;
+
+            const getRes = await fetch(url, { headers: { 'Authorization': `token ${cleanToken()}`, 'Accept': 'application/vnd.github.v3+json' } });
+            if (getRes.ok) { const fileData = await getRes.json(); sha = fileData?.sha; }
+
+            const bodyData = { message: `Save rollcall data: ${fileName}`, content: base64Content };
+            if (sha) bodyData.sha = sha;
+
+            const putRes = await fetch(url, {
+                method: 'PUT', headers: { 'Authorization': `token ${cleanToken()}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (putRes.ok) {
+                currentEditingFileName = fileName; updateFileStatusUI();
+                setUnsavedStatus(false);
+                return true;
+            } else {
+                throw new Error((await putRes.json()).message);
+            }
+        }
+
         async function fetchGitHubFileList(folderName) {
             fileListContainer.innerHTML = '<span class="loading-text">正在讀取雲端清單，請稍候...</span>';
             const url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${folderName}`;
@@ -505,31 +587,6 @@
             } catch (e) { 
                 console.error(e); 
                 fileListContainer.innerHTML = '<span style="color:#e74c3c">連線至 GitHub 發生錯誤。</span>';
-            }
-        }
-
-        async function executeUploadToGitHub(fileName) {
-            const fullPath = `${ROLL_FOLDER}/${fileName}`, url = `https://api.github.com/repos/${GIT_OWNER}/${GIT_REPO}/contents/${fullPath}`;
-            const content = generateExportContent(), base64Content = btoa(unescape(encodeURIComponent(content)));
-            let sha = null;
-
-            const getRes = await fetch(url, { headers: { 'Authorization': `token ${cleanToken()}`, 'Accept': 'application/vnd.github.v3+json' } });
-            if (getRes.ok) { const fileData = await getRes.json(); sha = fileData?.sha; }
-
-            const bodyData = { message: `Save rollcall data: ${fileName}`, content: base64Content };
-            if (sha) bodyData.sha = sha;
-
-            const putRes = await fetch(url, {
-                method: 'PUT', headers: { 'Authorization': `token ${cleanToken()}`, 'Content-Type': 'application/json', 'Accept': 'application/vnd.github.v3+json' },
-                body: JSON.stringify(bodyData)
-            });
-
-            if (putRes.ok) {
-                currentEditingFileName = fileName; updateFileStatusUI();
-                setUnsavedStatus(false);
-                return true;
-            } else {
-                throw new Error((await putRes.json()).message);
             }
         }
 
@@ -559,20 +616,20 @@
             btn.disabled = false; btn.innerText = '另存新紀錄';
         });
 
-        // 核心修改：匯出成 Excel 時同步觸發 GitHub 雲端存檔
         document.getElementById('exportExcelBtn').addEventListener('click', async () => {
             const cells = document.querySelectorAll('.seat-cell');
             const excelData = [];
 
             cells.forEach(td => {
                 const name = td.querySelector('.seat-name').innerText.trim();
-                if (name !== '空' || td.dataset.color !== 'white' || td.dataset.status !== '') {
+                const isEmptyClass = td.classList.contains('is-empty');
+                if ((name !== '空' && !isEmptyClass) || td.dataset.color !== 'white' || td.dataset.status !== '') {
                     const code = colorMap[td.dataset.color] || 'W';
                     const categoryName = dynamicCategoryLabels[code] || fallbackLabelsMap[code] || '未知';
 
                     excelData.push({
                         '類別名稱': categoryName, 
-                        '姓名': name === '空' ? '' : name,
+                        '姓名': (name === '空' || isEmptyClass) ? '' : name,
                         '點名狀態': zhStatusMap[td.dataset.status || ''],
                         '_colorSortCode': code 
                     });
@@ -591,7 +648,6 @@
 
             let outName = currentEditingFileName ? currentEditingFileName.slice(0, -4) : `點名紀錄_${getFormattedTime()}`;
 
-            // 1. 同步存檔到 GitHub
             let cloudSaveSuccess = false;
             let targetFileName = currentEditingFileName || `${outName}.txt`;
             try {
@@ -601,8 +657,7 @@
                 console.error("雲端存檔失敗:", e);
             }
 
-            // 2. 處理並下載 Excel
-            const colorOrder = ['W', 'R', 'O', 'Y', 'G', 'B', 'P'];
+            const colorOrder = ['W', 'R', 'O', 'Y', 'G', 'B', 'P', 'K', 'C', 'L', 'N', 'V', 'I', 'T', 'M', 'D'];
             excelData.sort((a, b) => {
                 const indexA = colorOrder.indexOf(a._colorSortCode);
                 const indexB = colorOrder.indexOf(b._colorSortCode);
@@ -617,7 +672,6 @@
             
             XLSX.writeFile(workbook, `${outName}.xlsx`);
 
-            // 3. 恢復按鈕狀態並提示使用者
             btn.disabled = false;
             btn.innerText = originalText;
 
