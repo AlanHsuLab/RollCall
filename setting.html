@@ -156,7 +156,7 @@
             if (!currentInput) return;
             
             const currentName = currentInput.value || currentInput.placeholder;
-            const newName = prompt(`請輸入新名稱（目前：${currentName}）（請勿使用/符號）：`, currentInput.value);
+            const newName = prompt(`請輸入類別新名稱（目前：${currentName}）：`, currentInput.value);
             
             if (newName !== null) {
                 saveState();
